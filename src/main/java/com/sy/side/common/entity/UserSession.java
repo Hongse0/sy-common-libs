@@ -1,0 +1,23 @@
+package com.sy.side.common.entity;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+
+@Setter
+@Getter
+@ToString
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class UserSession {
+    private UserType userType;
+    private MemberSession memberSession;
+
+    public enum UserType {
+        MEMBER, ADMIN, GUEST
+    }
+}
