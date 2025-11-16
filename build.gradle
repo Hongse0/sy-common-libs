@@ -53,7 +53,7 @@ dependencies {
 
 shadowJar {
     archiveBaseName.set("sy-common-lib")
-    archiveVersion.set("1.0.1")
+    archiveVersion.set("1.0.9")
     archiveClassifier.set("")
     dependencies {
         include(dependency('com.auth0:java-jwt:4.4.0'))

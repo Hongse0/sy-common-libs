@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: common-sy-lib
+    version: 1.0.0
+
+# db-Ekey
+#database:
+#  encryption:
+#    key: u2HtXDJibsgWEyWblWzcr9rzJv+LQeQOV71M+yipFLE=
+
+
+# mybatis
+mybatis:
+  mapper-locations: "classpath:mapper/**.xml"
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
