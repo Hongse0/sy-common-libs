@@ -16,18 +16,36 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 @Slf4j
 @RequiredArgsConstructor
 public class AuthResolver implements HandlerMethodArgumentResolver {
-    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    private static final String H_MEMBER_ID  = "X-MEMBER-ID";
+    private static final String H_LOGIN_TYPE = "X-LOGIN-TYPE";
+    private static final String H_SNS_TYPE   = "X-SNS-TYPE";
 
     @Override
     public boolean supportsParameter(MethodParameter parameter) {
-        boolean isAnnotation = parameter.hasParameterAnnotation(AuthParam.class);
-        boolean isType = parameter.getParameterType().equals(MemberSession.class);
-        return isAnnotation && isType;
+        return parameter.hasParameterAnnotation(AuthParam.class)
+                && MemberSession.class.isAssignableFrom(parameter.getParameterType());
     }
 
     @Override
-    public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer, NativeWebRequest webRequest, WebDataBinderFactory binderFactory) throws Exception {
-        String memberStr = webRequest.getHeader("member-session");
-        return this.objectMapper.readValue(memberStr, MemberSession.class);
+    public Object resolveArgument(
+            MethodParameter parameter,
+            ModelAndViewContainer mavContainer,
+            NativeWebRequest webRequest,
+            WebDataBinderFactory binderFactory
+    ) {
+        String memberIdStr = webRequest.getHeader(H_MEMBER_ID);
+        if (memberIdStr == null || memberIdStr.isBlank()) {
+            throw new IllegalStateException("로그인이 필요합니다.");
+        }
+
+        long memberId = Long.parseLong(memberIdStr);
+
+        return MemberSession.builder()
+                .memberId(memberId)
+                .loginType(webRequest.getHeader(H_LOGIN_TYPE))
+                .snsType(webRequest.getHeader(H_SNS_TYPE))
+                .build();
     }
 }
+

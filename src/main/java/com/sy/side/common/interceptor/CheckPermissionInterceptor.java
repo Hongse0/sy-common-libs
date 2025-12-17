@@ -18,42 +18,45 @@ import org.springframework.web.servlet.HandlerInterceptor;
 @Slf4j
 @RequiredArgsConstructor
 public class CheckPermissionInterceptor implements HandlerInterceptor {
-    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    private static final String H_MEMBER_ID = "X-MEMBER-ID";
+    private static final String H_USER_TYPE = "X-USER-TYPE";
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        if(!(handler instanceof HandlerMethod handlerMethod)){
+    public boolean preHandle(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            Object handler
+    ) {
+        if (!(handler instanceof HandlerMethod handlerMethod)) {
             return true;
         }
 
-        Class<?> controllerClass = handlerMethod.getBeanType();
-        CheckPermission controllerClassAnnotation = controllerClass.getAnnotation(CheckPermission.class);
-        CheckPermission methodAnnotation = handlerMethod.getMethodAnnotation(CheckPermission.class);
+        CheckPermission methodAnn =
+                handlerMethod.getMethodAnnotation(CheckPermission.class);
+        CheckPermission classAnn =
+                handlerMethod.getBeanType().getAnnotation(CheckPermission.class);
 
-        if (controllerClassAnnotation != null || methodAnnotation != null) {
-            CheckPermission checkPermission = (methodAnnotation != null) ? methodAnnotation: controllerClassAnnotation;
-            var role = checkPermission.value();
-
-            String memberStr = request.getHeader("member-session");
-            MemberSession memberSession = null;
-
-            if(memberStr == null || memberStr.trim().equals("")) {
-                throw new BizException(ErrorCodeImpl.INSUFFICIENT_PERMISSION);
-            }
-
-            try{
-                memberSession = this.objectMapper.readValue(memberStr, MemberSession.class);
-            }catch (Exception ex) {
-                log.error("", ex);
-                throw new BizException(ErrorCodeImpl.INSUFFICIENT_PERMISSION);
-            }
-
-            if(!memberSession.getRole().contains(role)) {
-                throw new BizException(ErrorCodeImpl.INSUFFICIENT_PERMISSION);
-            }
+        if (methodAnn == null && classAnn == null) {
+            return true;
         }
 
+        // 로그인 여부
+        String memberIdStr = request.getHeader(H_MEMBER_ID);
+        if (memberIdStr == null || memberIdStr.isBlank()) {
+            throw new BizException(ErrorCodeImpl.INSUFFICIENT_PERMISSION);
+        }
+
+        // 역할 체크 (예시)
+        String userType = request.getHeader(H_USER_TYPE);
+        CheckPermission permission =
+                (methodAnn != null) ? methodAnn : classAnn;
+
+        if (!permission.value().name().equals(userType)) {
+            throw new BizException(ErrorCodeImpl.INSUFFICIENT_PERMISSION);
+        }
 
         return true;
     }
 }
+

@@ -1,10 +1,10 @@
 package com.sy.side.common.resolver;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sy.side.common.annotation.UserParam;
+import com.sy.side.common.entity.MemberSession;
 import com.sy.side.common.entity.UserSession;
 import com.sy.side.common.entity.UserSession.UserType;
-import lombok.RequiredArgsConstructor;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.MethodParameter;
 import org.springframework.stereotype.Component;
@@ -15,25 +15,56 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 
 @Component
 @Slf4j
-@RequiredArgsConstructor
 public class UserResolver implements HandlerMethodArgumentResolver {
-    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    private static final String H_USER_TYPE  = "X-USER-TYPE";
+    private static final String H_MEMBER_ID  = "X-MEMBER-ID";
+    private static final String H_LOGIN_TYPE = "X-LOGIN-TYPE";
+    private static final String H_SNS_TYPE   = "X-SNS-TYPE";
 
     @Override
     public boolean supportsParameter(MethodParameter parameter) {
-        boolean isAnnotation = parameter.hasParameterAnnotation(UserParam.class);
-        boolean isType = parameter.getParameterType().equals(UserSession.class);
-        return isAnnotation && isType;
+        return parameter.hasParameterAnnotation(UserParam.class)
+                && UserSession.class.isAssignableFrom(parameter.getParameterType());
     }
 
     @Override
-    public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer, NativeWebRequest webRequest, WebDataBinderFactory binderFactory) throws Exception {
-        String userStr = webRequest.getHeader("user-session");
-        if (userStr == null) {
+    public Object resolveArgument(
+            MethodParameter parameter,
+            ModelAndViewContainer mavContainer,
+            NativeWebRequest webRequest,
+            WebDataBinderFactory binderFactory
+    ) {
+        HttpServletRequest request =
+                webRequest.getNativeRequest(HttpServletRequest.class);
+
+        String memberIdStr = request.getHeader(H_MEMBER_ID);
+        if (memberIdStr == null || memberIdStr.isBlank()) {
+            // 로그인 안 된 상태
             return UserSession.builder()
                     .userType(UserType.GUEST)
                     .build();
         }
-        return this.objectMapper.readValue(userStr, UserSession.class);
+
+        long memberId = Long.parseLong(memberIdStr);
+
+        MemberSession memberSession = MemberSession.builder()
+                .memberId(memberId)
+                .loginType(request.getHeader(H_LOGIN_TYPE))
+                .snsType(request.getHeader(H_SNS_TYPE))
+                .build();
+
+        UserType userType = UserType.MEMBER;
+        String userTypeHeader = request.getHeader(H_USER_TYPE);
+        if (userTypeHeader != null) {
+            try {
+                userType = UserType.valueOf(userTypeHeader);
+            } catch (Exception ignored) {}
+        }
+
+        return UserSession.builder()
+                .userType(userType)
+                .memberSession(memberSession)
+                .build();
     }
 }
